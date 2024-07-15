@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:slack="http://www.mulesoft.org/schema/mule/slack" xmlns:jira="http://www.mulesoft.org/schema/mule/jira" xmlns:anypoint-mq="http://www.mulesoft.org/schema/mule/anypoint-mq"
+	xmlns:kafka="http://www.mulesoft.org/schema/mule/kafka" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+                          http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+	http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+	http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+	http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+	http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+	http://www.mulesoft.org/schema/mule/slack http://www.mulesoft.org/schema/mule/slack/current/mule-slack.xsd
+	http://www.mulesoft.org/schema/mule/jira http://www.mulesoft.org/schema/mule/jira/current/mule-jira.xsd
+	http://www.mulesoft.org/schema/mule/anypoint-mq http://www.mulesoft.org/schema/mule/anypoint-mq/current/mule-anypoint-mq.xsd
+	http://www.mulesoft.org/schema/mule/kafka http://www.mulesoft.org/schema/mule/kafka/current/mule-kafka.xsd">
+
+    <configuration-properties file="config.yaml" />
+
+    <db:config name="dbConfig">
+        <db:derby-connection database="target/muleEmbeddedDB" create="true" />
+    </db:config>
+
+    <salesforce:sfdc-config name="sfdc2">
+        <salesforce:basic-connection username="marketing@mulesoft.com" password="MuleSoft123" url="https://login.salesforce.com/services/Soap/u/52.0" />
+    </salesforce:sfdc-config>
+
+    <http:listener-config name="HTTP_Listener_config">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+
+    <jira:config name="Jira_Config">
+        <jira:basic-auth-connection username="${jira.username}" password="${jira.token}" baseUri="${jira.uri}" />
+    </jira:config>
+
+    <file:config name="File_Config">
+        <file:connection workingDir="${file.dir}" />
+    </file:config>
+
+    <kafka:producer-config name="Apache_Kafka_Producer_configuration_Kafka-prod">
+        <kafka:producer-plaintext-connection>
+            <kafka:bootstrap-servers>
+                <kafka:bootstrap-server value="localhost:9092" />
+            </kafka:bootstrap-servers>
+        </kafka:producer-plaintext-connection>
+    </kafka:producer-config>
+    <kafka:consumer-config name="Apache_Kafka_Consumer_configuration_Kafka-prod">
+        <kafka:consumer-plaintext-connection>
+            <kafka:bootstrap-servers>
+                <kafka:bootstrap-server value="localhost:9092" />
+            </kafka:bootstrap-servers>
+            <kafka:topic-patterns>
+                <kafka:topic-pattern value="order-backordered" />
+            </kafka:topic-patterns>
+        </kafka:consumer-plaintext-connection>
+    </kafka:consumer-config>
+
+    <anypoint-mq:config name="Anypoint_MQ_configuration_AMQ-prod">
+        <anypoint-mq:connection clientId="${anypointmq.server.AMQ-prod.clientAppId}" clientSecret="${anypointmq.server.AMQ-prod.clientSecret}" url="https://mq-us-east-1.stgx.anypoint.mulesoft.com/api/v1/organizations/8dbc2756-83d6-4a1c-91c4-6eafbe7d7ae0/environments/49cbf562-fed4-4b42-bce9-98fe8f7bcf60" />
+    </anypoint-mq:config>
+
+    <slack:config name="Slack_Config">
+        <slack:token-connection token="${slack.token}" />
+    </slack:config>
+
+    <flow name="selectMetadata">
+        <set-payload value="hello" />
+        <set-payload value="world" />
+        <set-payload value="#[10]" />
+        <db:select config-ref="dbConfig">
+            <db:sql>SELECT * FROM TABLE2</db:sql>
+        </db:select>
+        <logger message="#[payload]" />
+    </flow>
+
+    <sub-flow name="selectMetadataSubflow">
+        <set-payload value="hello" />
+        <set-payload value="world" />
+        <set-payload value="#[10]" />
+        <db:select config-ref="dbConfig">
+            <db:sql>SELECT * FROM TABLE2</db:sql>
+        </db:select>
+        <logger message="#[payload]" />
+    </sub-flow>
+
+    <flow name="withFlowRef">
+        <set-payload value="#[10]" />
+        <flow-ref name="selectMetadata" />
+        <set-payload value="#[payload[0].NAME]" />
+    </flow>
+
+    <flow name="withSubFlowRef">
+        <set-payload value="#[10]" />
+        <flow-ref name="selectMetadataSubflow" />
+        <set-payload value="#[payload[0].NAME]" />
+    </flow>
+
+    <flow name="insert">
+        <set-payload value="Orange" />
+        <db:insert config-ref="dbConfig">
+            <db:sql>INSERT INTO TABLE2 (NAME) VALUES (:fruit)</db:sql>
+            <db:input-parameters>
+                <![CDATA[#[output application/java
+---
+{
+    fruit : {fruitName : payload} as Object {class : "estebanwasinger.Fruit"}
+}]]]>
+            </db:input-parameters>
+        </db:insert>
+    </flow>
+
+    <flow name="withForEach">
+        <set-payload value="#[[1, 2, 3]]" />
+        <foreach>
+            <logger message="#[payload + vars.counter]" />
+            <logger message="hola" />
+        </foreach>
+        <set-variable variableName="someVar" value="10" />
+        <set-payload value="#[vars.someVar]" />
+    </flow>
+
+    <flow name="withScatterGather">
+        <set-payload value="Hello world" />
+        <scatter-gather>
+            <route>
+                <set-payload value="#[10]" />
+                <set-variable variableName="var1" value="a" />
+            </route>
+            <route>
+                <set-payload value="banana" />
+                <set-variable variableName="var2" value="b" />
+            </route>
+        </scatter-gather>
+        <logger message="#[payload]" />
+    </flow>
+
+</mule>

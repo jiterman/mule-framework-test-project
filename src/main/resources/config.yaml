@@ -1,0 +1,15 @@
+salesforce:
+  username: ""
+  password: ""
+  token: ""
+
+jira:
+  username: ""
+  token: ""
+  uri: ""
+
+slack:
+  token: ""
+  
+file:
+    dir: "/Users/{user}/AnypointCodeBuilder/files"

@@ -1,0 +1,9 @@
+{
+  "minMuleVersion": "4.7.0",
+  "javaSpecificationVersions": [
+    "17"
+  ],
+  "configs": [
+    "app-type-propagation.xml"
+  ]
+}
