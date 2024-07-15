@@ -19,7 +19,7 @@
     </db:config>
 
     <salesforce:sfdc-config name="sfdc2">
-        <salesforce:basic-connection username="marketing@mulesoft.com" password="MuleSoft123" url="https://login.salesforce.com/services/Soap/u/52.0" />
+        <salesforce:basic-connection username="${salesforce.username}" password="${salesforce.password}" securityToken="${salesforce.token}"/>
     </salesforce:sfdc-config>
 
     <http:listener-config name="HTTP_Listener_config">
